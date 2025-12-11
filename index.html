@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Year Shop with Particle Animation</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Set Inter font -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* CSS for snowfall animation */
+        @keyframes fall {
+          0% { transform: translateY(-20px) translateX(0px); }
+          50% { transform: translateY(50vh) translateX(20px); }
+          100% { transform: translateY(105vh) translateX(-20px); }
+        }
+        /* CSS for particle animation */
+        @keyframes particle-fly {
+          0% { 
+            opacity: 1;
+            transform: translate(0, 0); 
+          }
+          70% { 
+            opacity: 1;
+          }
+          100% { 
+            opacity: 0;
+            transform: translate(var(--translate-x), var(--translate-y)) scale(0.1);
+          }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+<div id="app">
+    <!-- The application content will be rendered here -->
+</div>
+
+<script>
+    // --- Mock Data (Products) ---
+    const products = [
+      {
+        id: 1,
+        name: "Christmas Tree Decorations 'Color of the Year'",
+        category: "decor",
+        image: "https://i.ibb.co/pBcLZVrS/DSC00488-1000x1000.jpg",
+        rating: 4.9
+      },
+      {
+        id: 2,
+        name: "Golden Radiance Ball Set",
+        category: "decor",
+        image: "https://i.ibb.co/HL46JZLp/DSC00466-1000x1000.jpg",
+        rating: 4.7
+      },
+      {
+        id: 3,
+        name: "Warm Light Garland (10m)",
+        category: "lights",
+        image: "https://i.ibb.co/S7tbKt2b/6917341795-w640-h640-girlyanda-nitka-10.webp",
+        rating: 4.8
+      },
+      {
+        id: 4,
+        name: "Christmas Wreath",
+        category: "decor",
+        image: "https://i.ibb.co/rRRWDTDR/tempimageorlcvc-1152x1536.webp",
+        rating: 4.6
+      },
+      {
+        id: 5,
+        name: "Illuminated Christmas Sleigh with Reindeer",
+        category: "gifts",
+        image: "https://i.ibb.co/fVTxmGZL/1459ded1da63a7997ca7890343fabcfd005c9341-original.jpg",
+        rating: 4.9
+      },
+      {
+        id: 6,
+        name: "Knitted Gift Stocking",
+        category: "decor",
+        image: "https://images.unsplash.com/photo-1543589077-47d81606c1bf?auto=format&fit=crop&q=80&w=600",
+        rating: 4.5
+      },
+      {
+        id: 7,
+        name: "Wooden Reindeer Figurine",
+        category: "decor",
+        image: "https://images.unsplash.com/photo-1514920671603-5df3328e102f?auto=format&fit=crop&q=80&w=600",
+        rating: 4.8
+      },
+      {
+        id: 8,
+        name: "Surprise Gift Box",
+        category: "gifts",
+        image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&q=80&w=600",
+        rating: 5.0
+      }
+    ];
+
+    const categories = [
+      { id: 'all', name: 'All Items' },
+      { id: 'tree', name: 'Christmas Trees' },
+      { id: 'decor', name: 'Decorations' },
+      { id: 'lights', name: 'Garlands' },
+      { id: 'gifts', name: 'Gifts' },
+    ];
+
+    // --- State Management ---
+    let state = {
+        cartOpen: false,
+        cart: [],
+        activeCategory: 'all',
+        mobileMenuOpen: false,
+        notification: null,
+        particleEffect: null,
+    };
+
+    function setState(newState) {
+        state = { ...state, ...newState };
+        render();
+    }
+
+    // --- Utility Functions (Icons) ---
+    function getIcon(name, classes) {
+        // SVG icons for use in HTML strings
+        const icons = {
+            'ShoppingCart': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`,
+            'Star': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+            'Menu': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>`,
+            'X': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`,
+            'Snowflake': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 20 4-4-4-4"/><path d="m8 4-4 4 4 4"/></svg>`,
+            'Trash2': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`,
+            'Gift': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><polyline points="20 12 12 12 12 2"/><path d="M20 12c0 2.21-1.79 4-4 4h-4"/><path d="M4 12c0 2.21 1.79 4 4 4h4"/><path d="M12 4v8"/><path d="M20 16v4c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-4"/></svg>`,
+            'Heart': `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${classes}"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3.13.78-4.5 2-1.37-1.22-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>`,
+        };
+        return icons[name] || '';
+    }
+
+    // --- DOM References for animation ---
+    let cartRef = null; // Cart icon in the navigation bar (target for particles)
+    
+    // --- Cart Logic ---
+    const cartCount = () => state.cart.reduce((sum, item) => sum + item.quantity, 0);
+
+    function addToCart(productId, event) {
+        const product = products.find(p => p.id === productId);
+
+        // 1. Update cart state
+        const newCart = [...state.cart];
+        const existing = newCart.find(item => item.id === productId);
+
+        if (existing) {
+            existing.quantity += 1;
+        } else {
+            newCart.push({ ...product, quantity: 1 });
+        }
+        
+        // 2. Trigger particle animation
+        if (cartRef && event) {
+            const startRect = event.currentTarget.getBoundingClientRect();
+            const targetRect = cartRef.getBoundingClientRect();
+
+            setState({
+                cart: newCart,
+                notification: `${product.name} added to cart!`,
+                particleEffect: {
+                    id: Date.now(),
+                    startX: startRect.left + startRect.width / 2,
+                    startY: startRect.top + startRect.height / 2,
+                    targetX: targetRect.left + targetRect.width / 2,
+                    targetY: targetRect.top + targetRect.height / 2,
+                }
+            });
+
+            // Clear the particle effect and notification
+            setTimeout(() => setState({ particleEffect: null }), 700);
+            setTimeout(() => setState({ notification: null }), 3000);
+            return; // Exit to avoid double setState call
+        }
+
+        // Fallback update
+        setState({ cart: newCart, notification: `${product.name} added to cart!` });
+        setTimeout(() => setState({ notification: null }), 3000);
+    }
+
+    function removeFromCart(id) {
+        setState({ cart: state.cart.filter(item => item.id !== id) });
+    }
+
+    function updateQuantity(id, delta) {
+        const newCart = state.cart.map(item => {
+            if (item.id === id) {
+                const newQty = item.quantity + delta;
+                return newQty > 0 ? { ...item, quantity: newQty } : item;
+            }
+            return item;
+        }).filter(item => item.quantity > 0);
+        setState({ cart: newCart });
+    }
+
+    // --- Rendering Components (HTML Strings) ---
+
+    // 1. Snowfall Component
+    function renderSnowfall() {
+        const numFlakes = 50;
+        let flakesHtml = '';
+
+        for (let i = 0; i < numFlakes; i++) {
+            const size = Math.random() * 10 + 5;
+            const duration = Math.random() * 3 + 5;
+            const delay = Math.random() * 5;
+            const opacity = Math.random() * 0.5 + 0.3;
+            const left = Math.random() * 100;
+
+            flakesHtml += `
+                <div 
+                    class="absolute top-[-20px] text-white rounded-full bg-white blur-[1px]"
+                    style="
+                        left: ${left}%;
+                        width: ${size}px;
+                        height: ${size}px;
+                        opacity: ${opacity};
+                        animation: fall ${duration}s linear infinite;
+                        animation-delay: -${delay}s;
+                    "
+                ></div>
+            `;
+        }
+        return `<div class="fixed inset-0 pointer-events-none z-0 overflow-hidden">${flakesHtml}</div>`;
+    }
+
+    // 2. Particle Animation Component
+    function renderCartParticles() {
+        if (!state.particleEffect) return '';
+
+        const { startX, startY, targetX, targetY } = state.particleEffect;
+        const duration = 600;
+        const numParticles = 8;
+        let particlesHtml = '';
+
+        for (let index = 0; index < numParticles; index++) {
+            const offsetX = (Math.random() - 0.5) * 20;
+            const offsetY = (Math.random() - 0.5) * 20;
+            const delay = index * 50; 
+            
+            const translateX = targetX - startX + offsetX;
+            const translateY = targetY - startY + offsetY;
+
+            particlesHtml += `
+                <div
+                    class="absolute rounded-full bg-red-400 opacity-0"
+                    style="
+                        width: ${Math.random() * 4 + 4}px;
+                        height: ${Math.random() * 4 + 4}px;
+                        left: ${startX}px;
+                        top: ${startY}px;
+                        --translate-x: ${translateX}px;
+                        --translate-y: ${translateY}px;
+                        animation: particle-fly ${duration}ms forwards ${delay}ms;
+                    "
+                ></div>
+            `;
+        }
+
+        return `<div id="particle-container" class="fixed inset-0 pointer-events-none z-50">${particlesHtml}</div>`;
+    }
+
+    // 3. Product Card Component
+    function renderProductCard(product) {
+        return `
+            <div class="group bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-white/5 hover:border-red-500/50 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+              <div class="relative h-64 overflow-hidden">
+                <img 
+                  src="${product.image}" 
+                  alt="${product.name}"
+                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  onerror="this.onerror=null;this.src='https://placehold.co/600x400/991b1b/ffffff?text=Image+Unavailable';"
+                />
+                <button class="absolute top-4 right-4 p-2 bg-white/10 backdrop-blur-sm rounded-full text-white hover:bg-red-600 transition-colors">
+                  ${getIcon('Heart', 'h-5 w-5')}
+                </button>
+              </div>
+              <div class="p-6">
+                <div class="flex items-center gap-1 mb-2 text-yellow-400 text-sm">
+                  ${getIcon('Star', 'h-4 w-4 fill-current')}
+                  <span>${product.rating}</span>
+                </div>
+                <h3 class="text-lg font-semibold text-white mb-2 line-clamp-1">${product.name}</h3>
+                
+                <div class="flex items-center justify-between mt-4">
+                  <button 
+                    data-product-id="${product.id}"
+                    class="add-to-cart-btn flex items-center gap-2 bg-slate-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-300 w-full justify-center"
+                  >
+                    ${getIcon('ShoppingCart', 'h-4 w-4')}
+                    <span>Add to Cart</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+        `;
+    }
+
+    // 4. Main Application Renderer
+    function render() {
+        const app = document.getElementById('app');
+        if (!app) return;
+
+        const filteredProducts = state.activeCategory === 'all' 
+            ? products 
+            : products.filter(p => p.category === state.activeCategory);
+
+        const cartCountValue = cartCount();
+        const activeCatName = categories.find(c => c.id === state.activeCategory)?.name;
+
+        // Main HTML structure
+        app.innerHTML = `
+            ${renderSnowfall()}
+            ${renderCartParticles()}
+
+            <!-- Notification -->
+            ${state.notification ? `
+                <div class="fixed top-24 right-4 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl animate-bounce">
+                    ${state.notification}
+                </div>
+            ` : ''}
+
+            <!-- Navigation -->
+            <nav class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-white/10 shadow-lg">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex items-center justify-between h-20">
+                        <!-- Logo -->
+                        <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" id="logo-btn">
+                            <div class="bg-red-600 p-2 rounded-full">
+                                ${getIcon('Snowflake', 'h-6 w-6 text-white')}
+                            </div>
+                            <span class="font-serif text-2xl font-bold text-white tracking-wider">
+                                New Year's<span class="text-red-500">Comfort</span>
+                            </span>
+                        </div>
+
+                        <!-- Desktop Menu -->
+                        <div class="hidden md:block">
+                            <div class="ml-10 flex items-baseline space-x-4">
+                                ${categories.map(cat => `
+                                    <button
+                                        data-category-id="${cat.id}"
+                                        class="category-btn px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                                            state.activeCategory === cat.id 
+                                                ? 'bg-red-600 text-white' 
+                                                : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                                        }"
+                                    >
+                                        ${cat.name}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Cart and Mobile Menu (Target for particles) -->
+                        <div class="flex items-center gap-4">
+                            <button 
+                                id="nav-cart-btn"
+                                class="relative p-2 text-slate-300 hover:text-white transition-colors"
+                            >
+                                ${getIcon('ShoppingCart', 'h-6 w-6')}
+                                ${cartCountValue > 0 ? `
+                                    <span class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">
+                                        ${cartCountValue}
+                                    </span>
+                                ` : ''}
+                            </button>
+                            
+                            <div class="-mr-2 flex md:hidden">
+                                <button
+                                    id="mobile-menu-toggle"
+                                    class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none"
+                                >
+                                    ${state.mobileMenuOpen ? getIcon('X', 'h-6 w-6') : getIcon('Menu', 'h-6 w-6')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile Menu (Dropdown) -->
+                ${state.mobileMenuOpen ? `
+                    <div class="md:hidden bg-slate-800 border-b border-white/10">
+                        <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                            ${categories.map(cat => `
+                                <button
+                                    data-category-id="${cat.id}"
+                                    class="mobile-category-btn block w-full text-left px-3 py-2 rounded-md text-base font-medium ${
+                                        state.activeCategory === cat.id 
+                                            ? 'bg-red-600 text-white' 
+                                            : 'text-slate-300 hover:text-white hover:bg-slate-700'
+                                    }"
+                                >
+                                    ${cat.name}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </nav>
+
+            <!-- Hero Section -->
+            ${state.activeCategory === 'all' ? `
+                <div class="relative overflow-hidden bg-slate-900 border-b border-white/5">
+                    <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center opacity-30"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+                    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 flex flex-col items-center text-center z-10">
+                        <h1 class="text-4xl md:text-6xl font-serif font-bold text-white mb-6 drop-shadow-lg">
+                            Magic Comes Home
+                        </h1>
+                        <p class="text-xl text-slate-200 max-w-2xl mb-8 font-light">
+                            Create an unforgettable holiday atmosphere with our exclusive collection of seasonal decor and gifts.
+                        </p>
+                        <button 
+                            id="scroll-to-catalog"
+                            class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-10 rounded-full transition-all duration-300 transform hover:scale-105 shadow-[0_0_20px_rgba(220,38,38,0.5)]"
+                        >
+                            Go to Catalog
+                        </button>
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- Main Content (Catalog) -->
+            <main id="catalog" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 z-10 relative">
+                <h2 class="text-3xl font-serif font-bold text-white mb-8 border-b border-white/10 pb-4">
+                    ${activeCatName}
+                </h2>
+
+                <!-- Product Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    ${filteredProducts.map(renderProductCard).join('')}
+                </div>
+                
+                ${filteredProducts.length === 0 ? `
+                    <div class="text-center py-20 text-slate-400">
+                        <p class="text-xl">No items in this category yet.</p>
+                    </div>
+                ` : ''}
+            </main>
+            
+            <!-- Floating Cart Button (Left Corner) -->
+            <button
+                id="floating-cart-btn"
+                class="fixed bottom-6 left-6 z-30 p-4 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-red-500/50"
+            >
+                ${getIcon('ShoppingCart', 'h-6 w-6')}
+                ${cartCountValue > 0 ? `
+                    <span class="absolute top-0 right-0 inline-flex items-center justify-center h-5 w-5 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-slate-900 rounded-full border-2 border-red-600">
+                        ${cartCountValue}
+                    </span>
+                ` : ''}
+            </button>
+
+
+            <!-- Footer -->
+            <footer class="bg-slate-950 border-t border-white/10 pt-16 pb-8 relative z-10">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+                        <div>
+                            <div class="flex items-center gap-2 mb-4">
+                                ${getIcon('Snowflake', 'h-6 w-6 text-red-500')}
+                                <span class="font-serif text-xl font-bold text-white">New Year's Comfort</span>
+                            </div>
+                            <p class="text-slate-400">
+                                We bring the holiday spirit to every home. Only quality decorations and the most heartfelt gifts for your loved ones.
+                            </p>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-semibold mb-4 uppercase tracking-wider text-sm">For Customers</h4>
+                            <ul class="space-y-2 text-slate-400">
+                                <li><a href="#" class="hover:text-red-400 transition-colors">Delivery and Payment</a></li>
+                                <li><a href="#" class="hover:text-red-400 transition-colors">Quality Guarantee</a></li>
+                                <li><a href="#" class="hover:text-red-400 transition-colors">Returns and Refunds</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-semibold mb-4 uppercase tracking-wider text-sm">Contacts</h4>
+                            <ul class="space-y-2 text-slate-400">
+                                <li>+7 (999) 000-00-00</li>
+                                <li>hello@newyear-shop.com</li>
+                                <li>Moscow, Snowy St, 12</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="border-t border-white/10 pt-8 text-center text-slate-500 text-sm">
+                        © 2024 New Year's Comfort. All rights reserved.
+                    </div>
+                </div>
+            </footer>
+
+            <!-- Cart Modal (Drawer) -->
+            ${state.cartOpen ? `
+                <div class="fixed inset-0 z-50 overflow-hidden" id="cart-modal">
+                    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity cart-close-overlay"></div>
+                    <div class="absolute inset-y-0 right-0 max-w-full flex">
+                        <div class="w-screen max-w-md transform transition-transform duration-500 bg-slate-800 shadow-2xl border-l border-white/10 flex flex-col h-full">
+                            
+                            <!-- Cart Header -->
+                            <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-slate-900/50">
+                                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                    ${getIcon('ShoppingCart', 'h-5 w-5')}
+                                    Shopping Cart
+                                </h2>
+                                <button class="text-slate-400 hover:text-white cart-close-btn">
+                                    ${getIcon('X', 'h-6 w-6')}
+                                </button>
+                            </div>
+
+                            <!-- Item List -->
+                            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                                ${state.cart.length === 0 ? `
+                                    <div class="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
+                                        ${getIcon('Gift', 'h-16 w-16 opacity-20')}
+                                        <p class="text-lg">Your cart is empty</p>
+                                        <button class="text-red-400 hover:text-red-300 underline cart-close-btn">
+                                            Start Shopping
+                                        </button>
+                                    </div>
+                                ` : state.cart.map(item => `
+                                    <div class="flex gap-4 items-center bg-slate-700/30 p-4 rounded-lg">
+                                        <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-md" />
+                                        <div class="flex-1">
+                                            <h3 class="text-white font-medium text-sm line-clamp-1">${item.name}</h3>
+                                            <p class="text-red-400 font-bold mt-1 text-xs italic">Item ID: ${item.id}</p>
+                                        </div>
+                                        <div class="flex flex-col items-end gap-2">
+                                            <button data-product-id="${item.id}" class="remove-item-btn text-slate-500 hover:text-red-500 transition-colors">
+                                                ${getIcon('Trash2', 'h-4 w-4')}
+                                            </button>
+                                            <div class="flex items-center bg-slate-900 rounded-md">
+                                                <button data-product-id="${item.id}" data-delta="-1" class="update-qty-btn p-1 hover:text-red-400 px-2">-</button>
+                                                <span class="text-sm w-4 text-center">${item.quantity}</span>
+                                                <button data-product-id="${item.id}" data-delta="1" class="update-qty-btn p-1 hover:text-green-400 px-2">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <!-- Cart Footer -->
+                            ${state.cart.length > 0 ? `
+                                <div class="border-t border-white/10 p-6 bg-slate-900/50">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <span class="text-slate-400">Total Items:</span>
+                                        <span class="text-2xl font-bold text-white">${cartCountValue}</span>
+                                    </div>
+                                    <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors shadow-lg flex items-center justify-center gap-2">
+                                        Checkout
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+        `;
+
+        // --- Re-attach Event Listeners After Rendering ---
+        attachEventListeners();
+    }
+
+    // --- Event Listener Attachment ---
+    function attachEventListeners() {
+        // Set reference for the navigation cart button (particle target)
+        cartRef = document.getElementById('nav-cart-btn');
+
+        // Category Buttons
+        document.querySelectorAll('.category-btn, .mobile-category-btn').forEach(button => {
+            button.onclick = (e) => {
+                const categoryId = e.currentTarget.getAttribute('data-category-id');
+                setState({ activeCategory: categoryId, mobileMenuOpen: false });
+            };
+        });
+        
+        // Logo Button
+        const logoBtn = document.getElementById('logo-btn');
+        if (logoBtn) {
+            logoBtn.onclick = () => setState({ activeCategory: 'all' });
+        }
+
+        // Scroll to Catalog Button
+        const scrollBtn = document.getElementById('scroll-to-catalog');
+        if (scrollBtn) {
+            scrollBtn.onclick = () => {
+                document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+            };
+        }
+
+        // Mobile Menu Toggle Button
+        const menuToggle = document.getElementById('mobile-menu-toggle');
+        if (menuToggle) {
+            menuToggle.onclick = () => setState({ mobileMenuOpen: !state.mobileMenuOpen });
+        }
+
+        // Open Cart Buttons
+        const navCartBtn = document.getElementById('nav-cart-btn');
+        if (navCartBtn) {
+            navCartBtn.onclick = () => setState({ cartOpen: true });
+        }
+        const floatingCartBtn = document.getElementById('floating-cart-btn');
+        if (floatingCartBtn) {
+            floatingCartBtn.onclick = () => setState({ cartOpen: true });
+        }
+        
+        // Close Cart Buttons
+        document.querySelectorAll('.cart-close-overlay, .cart-close-btn').forEach(btn => {
+            btn.onclick = () => setState({ cartOpen: false });
+        });
+
+        // "Add to Cart" Buttons (Triggers Particle Animation)
+        document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+            button.onclick = (e) => {
+                const productId = parseInt(e.currentTarget.getAttribute('data-product-id'));
+                addToCart(productId, e);
+            };
+        });
+
+        // Remove Item Buttons
+        document.querySelectorAll('.remove-item-btn').forEach(button => {
+            button.onclick = (e) => {
+                const productId = parseInt(e.currentTarget.getAttribute('data-product-id'));
+                removeFromCart(productId);
+            };
+        });
+
+        // Update Quantity Buttons
+        document.querySelectorAll('.update-qty-btn').forEach(button => {
+            button.onclick = (e) => {
+                const productId = parseInt(e.currentTarget.getAttribute('data-product-id'));
+                const delta = parseInt(e.currentTarget.getAttribute('data-delta'));
+                updateQuantity(productId, delta);
+            };
+        });
+    }
+
+    // Initialize the application after the window loads
+    window.onload = render;
+
+</script>
+</body>
+</html>
